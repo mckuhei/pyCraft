@@ -4,11 +4,14 @@ from minecraft.networking.types import (
     VarInt, String, VarIntPrefixedByteArray, TrailingByteArray
 )
 
+from ..play import DisconnectPacket as DisconnectPlayPacket
+
 
 # Formerly known as state_login_clientbound.
 def get_packets(context):
     packets = {
         DisconnectPacket,
+        DisconnectPlayPacket, # Errors during plugins negociation may trigger play-like disconnect packet
         EncryptionRequestPacket,
         LoginSuccessPacket,
         SetCompressionPacket,

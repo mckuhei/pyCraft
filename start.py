@@ -7,7 +7,7 @@ import sys
 import re
 from optparse import OptionParser
 
-from minecraft import authentication
+from minecraft import authentication, forge
 from minecraft.exceptions import YggdrasilError
 from minecraft.networking.connection import Connection
 from minecraft.networking.packets import Packet, clientbound, serverbound
@@ -64,7 +64,7 @@ def main():
 
     if options.offline:
         print("Connecting in offline mode...")
-        connection = Connection(
+        connection = forge.ForgeConnection(
             options.address, options.port, username=options.username)
     else:
         auth_token = authentication.AuthenticationToken()
@@ -74,7 +74,7 @@ def main():
             print(e)
             sys.exit()
         print("Logged in as %s..." % auth_token.username)
-        connection = Connection(
+        connection = forge.ForgeConnection(
             options.address, options.port, auth_token=auth_token)
 
     if options.dump_packets:
@@ -95,6 +95,7 @@ def main():
 
     def handle_join_game(join_game_packet):
         print('Connected.')
+        print('Mod list is: %s'%(connection.forge_config.mods))
 
     connection.register_packet_listener(
         handle_join_game, clientbound.play.JoinGamePacket)
