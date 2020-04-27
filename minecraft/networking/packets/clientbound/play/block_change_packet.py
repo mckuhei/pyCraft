@@ -61,7 +61,7 @@ class MultiBlockChangePacket(Packet):
     chunk_pos = multi_attribute_alias(tuple, 'chunk_x', 'chunk_z')
 
     class Record(MutableRecord):
-        __slots__ = 'x', 'y', 'z', 'block_state_id'
+        __slots__ = 'x', 'y', 'z', 'block_state_id', 'location'
 
         def __init__(self, **kwds):
             self.block_state_id = 0
@@ -91,11 +91,13 @@ class MultiBlockChangePacket(Packet):
         # This alias is retained for backward compatibility.
         blockStateId = attribute_alias('block_state_id')
 
-        def read(self, file_object):
+        def read(self, file_object, parent):
             h_position = UnsignedByte.read(file_object)
             self.x, self.z = h_position >> 4, h_position & 0xF
             self.y = UnsignedByte.read(file_object)
             self.block_state_id = VarInt.read(file_object)
+            # Absolute position in world to be compatible with BlockChangePacket
+            self.location = Vector(self.position.x + parent.chunk_x*16, self.position.y, self.position.z + parent.chunk_z*16)
 
         def write(self, packet_buffer):
             UnsignedByte.send(self.x << 4 | self.z & 0xF, packet_buffer)
@@ -109,7 +111,7 @@ class MultiBlockChangePacket(Packet):
         self.records = []
         for i in range(records_count):
             record = self.Record()
-            record.read(file_object)
+            record.read(file_object, self)
             self.records.append(record)
 
     def write_fields(self, packet_buffer):

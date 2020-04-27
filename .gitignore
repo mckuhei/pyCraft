@@ -11,6 +11,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 env/
+venv/
 build/
 develop-eggs/
 dist/
@@ -83,3 +84,4 @@ sftp-config.json
 
 ### pyCraft ###
 credentials
+mcdata
