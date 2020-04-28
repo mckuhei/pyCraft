@@ -78,9 +78,16 @@ def main():
     blocks_states = {}
     with open("mcdata/blocks.json") as f:
         blocks = json.loads(f.read())
-        for x in blocks:
-            for s in blocks[x]['states']:
-                blocks_states[s['id']] = x
+    for x in blocks:
+        for s in blocks[x]['states']:
+            blocks_states[s['id']] = x
+
+    registries = {}
+    biomes = {}
+    with open("mcdata/registries.json") as f:
+        registries = json.loads(f.read())
+    for x in registries["minecraft:biome"]["entries"]:
+        biomes[registries["minecraft:biome"]["entries"][x]["protocol_id"]] = x
 
     if options.offline:
         print("Connecting in offline mode...")
@@ -157,6 +164,12 @@ def main():
 
     connection.register_packet_listener(handle_multiblock, clientbound.play.MultiBlockChangePacket)
 
+    def handle_chunk(chunk_packet):
+        if chunk_packet.entities == []:
+            return
+        print('Chunk at %d,%d (%s): %s'%(chunk_packet.x, chunk_packet.z, biomes[chunk_packet.biomes[0]], chunk_packet.__dict__))
+
+    connection.register_packet_listener(handle_chunk, clientbound.play.ChunkDataPacket)
 
 
     connection.connect()

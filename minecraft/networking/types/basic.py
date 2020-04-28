@@ -14,7 +14,7 @@ __all__ = (
     'Integer', 'FixedPointInteger', 'Angle', 'VarInt', 'Long',
     'UnsignedLong', 'Float', 'Double', 'ShortPrefixedByteArray',
     'VarIntPrefixedByteArray', 'TrailingByteArray', 'String', 'UUID',
-    'Position',
+    'Position', 'IntegerPrefixedByteArray',
 )
 
 
@@ -238,6 +238,18 @@ class ShortPrefixedByteArray(Type):
     @staticmethod
     def send(value, socket):
         Short.send(len(value), socket)
+        socket.send(value)
+
+
+class IntegerPrefixedByteArray(Type):
+    @staticmethod
+    def read(file_object):
+        length = Integer.read(file_object)
+        return struct.unpack(str(length) + "s", file_object.read(length))[0]
+
+    @staticmethod
+    def send(value, socket):
+        Integer.send(len(value), socket)
         socket.send(value)
 
 
