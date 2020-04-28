@@ -165,9 +165,29 @@ def main():
     connection.register_packet_listener(handle_multiblock, clientbound.play.MultiBlockChangePacket)
 
     def handle_chunk(chunk_packet):
-        if chunk_packet.entities == []:
+        if chunk_packet.x!=12 or chunk_packet.z!=-8:
             return
-        print('Chunk at %d,%d (%s): %s'%(chunk_packet.x, chunk_packet.z, biomes[chunk_packet.biomes[0]], chunk_packet.__dict__))
+        print('Chunk pillar at %d,%d (Biome=%s)'%(chunk_packet.x, chunk_packet.z, biomes[chunk_packet.biomes[0]]))
+        chunk = chunk_packet.chunks[4]
+        for z in range(16):
+            missing = []
+            for x in range(16):
+                sid = chunk.get_block_at(x, 0, z)
+                bloc = blocks_states[sid]
+
+                if bloc == "minecraft:air":
+                    c = " "
+                elif bloc == "minecraft:grass_block" or bloc == "minecraft:dirt":
+                    c = "-"
+                elif bloc == "minecraft:blue_concrete":
+                    c = "!"
+                elif bloc == "minecraft:stone":
+                    c = "X"
+                else:
+                    missing.append(bloc)
+                    c = "?"
+                print(c, end="")
+            print("  %s"%(",".join(missing)))
 
     connection.register_packet_listener(handle_chunk, clientbound.play.ChunkDataPacket)
 
