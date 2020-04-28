@@ -6,6 +6,7 @@ import getpass
 import sys
 import re
 import json
+import traceback
 from optparse import OptionParser
 
 from minecraft import authentication
@@ -13,6 +14,7 @@ from minecraft.exceptions import YggdrasilError
 from minecraft.networking.connection import Connection
 from minecraft.networking.packets import Packet, clientbound, serverbound
 from minecraft.compat import input
+from minecraft.managers import DataManager, AssetsManager, ChatManager, ChunksManager, EntitiesManager
 
 
 def get_options():
@@ -68,26 +70,8 @@ def get_options():
 def main():
     options = get_options()
 
-    lang = {}
-    with open("%s/lang/en_us.json"%options.assets) as f:
-        lang = json.loads(f.read())
-        for x in lang:
-            lang[x] = re.sub("\%\d+\$s", "%s", lang[x]) # HACK
-
-    blocks = {}
-    blocks_states = {}
-    with open("mcdata/blocks.json") as f:
-        blocks = json.loads(f.read())
-    for x in blocks:
-        for s in blocks[x]['states']:
-            blocks_states[s['id']] = x
-
-    registries = {}
-    biomes = {}
-    with open("mcdata/registries.json") as f:
-        registries = json.loads(f.read())
-    for x in registries["minecraft:biome"]["entries"]:
-        biomes[registries["minecraft:biome"]["entries"][x]["protocol_id"]] = x
+    assets = AssetsManager(options.assets)
+    mcdata = DataManager("./mcdata")
 
     if options.offline:
         print("Connecting in offline mode...")
@@ -100,7 +84,7 @@ def main():
             auth_token.authenticate(options.username, options.password)
         except YggdrasilError as e:
             print(e)
-            sys.exit()
+            return
         print("Logged in as %s..." % auth_token.username)
         connection = Connection(
             options.address, options.port, auth_token=auth_token,
@@ -125,92 +109,43 @@ def main():
         connection.register_packet_listener(
             print_outgoing, Packet, outgoing=True)
 
+    chat = ChatManager(assets)
+    chat.register(connection)
+
+    chunks = ChunksManager(mcdata)
+    chunks.register(connection)
+
     def handle_join_game(join_game_packet):
         print('Connected.')
 
     connection.register_packet_listener(handle_join_game, clientbound.play.JoinGamePacket)
-
-    def translate_chat(data):
-        if isinstance(data, str):
-            return data
-        elif 'extra' in data:
-            return "".join([translate_chat(x) for x in data['extra']])
-        elif 'translate' in data and 'with' in data:
-            params = [translate_chat(x) for x in data['with']]
-            return lang[data['translate']]%tuple(params)
-        elif 'translate' in data:
-            return lang[data['translate']]
-        elif 'text' in data:
-            return data['text']
-        else:
-            return "?"
-
-    def print_chat(chat_packet):
-        try:
-            print("[%s] %s"%(chat_packet.field_string('position'), translate_chat(json.loads(chat_packet.json_data))))
-        except Exception as ex:
-            print("Exception %r on message (%s): %s" % (ex, chat_packet.field_string('position'), chat_packet.json_data))
-
-    connection.register_packet_listener(print_chat, clientbound.play.ChatMessagePacket)
-
-    def handle_block(block_packet):
-        print('Block %s at %s'%(blocks_states[block_packet.block_state_id], block_packet.location))
-
-    connection.register_packet_listener(handle_block, clientbound.play.BlockChangePacket)
-
-    def handle_multiblock(multiblock_packet):
-        for b in multiblock_packet.records:
-            handle_block(b)
-
-    connection.register_packet_listener(handle_multiblock, clientbound.play.MultiBlockChangePacket)
-
-    def handle_chunk(chunk_packet):
-        if chunk_packet.x!=12 or chunk_packet.z!=-8:
-            return
-        print('Chunk pillar at %d,%d (Biome=%s)'%(chunk_packet.x, chunk_packet.z, biomes[chunk_packet.biomes[0]]))
-        chunk = chunk_packet.chunks[4]
-        for z in range(16):
-            missing = []
-            for x in range(16):
-                sid = chunk.get_block_at(x, 0, z)
-                bloc = blocks_states[sid]
-
-                if bloc == "minecraft:air":
-                    c = " "
-                elif bloc == "minecraft:grass_block" or bloc == "minecraft:dirt":
-                    c = "-"
-                elif bloc == "minecraft:blue_concrete":
-                    c = "!"
-                elif bloc == "minecraft:stone":
-                    c = "X"
-                else:
-                    missing.append(bloc)
-                    c = "?"
-                print(c, end="")
-            print("  %s"%(",".join(missing)))
-
-    connection.register_packet_listener(handle_chunk, clientbound.play.ChunkDataPacket)
-
 
     connection.connect()
 
     while True:
         try:
             text = input()
-            if not text:
-                continue
-            if text == "/respawn":
-                print("respawning...")
-                packet = serverbound.play.ClientStatusPacket()
-                packet.action_id = serverbound.play.ClientStatusPacket.RESPAWN
-                connection.write_packet(packet)
+            if text.startswith("!"):
+                if text == "!respawn":
+                    print("respawning...")
+                    packet = serverbound.play.ClientStatusPacket()
+                    packet.action_id = serverbound.play.ClientStatusPacket.RESPAWN
+                    connection.write_packet(packet)
+                elif text.startswith("!print "):
+                    p = text.split(" ")
+                    chunks.print_chunk(chunks.get_chunk(int(p[1]), int(p[2]), int(p[3])), int(p[4]))
+                else:
+                    print("Unknow test command: %s"%(text))
             else:
-                packet = serverbound.play.ChatPacket()
-                packet.message = text
-                connection.write_packet(packet)
+                chat.send(connection, text)
+
         except KeyboardInterrupt:
             print("Bye!")
             sys.exit()
+
+        except Exception as ex:
+            print("Exception: %s"%(ex))
+            traceback.print_exc()
 
 
 if __name__ == "__main__":

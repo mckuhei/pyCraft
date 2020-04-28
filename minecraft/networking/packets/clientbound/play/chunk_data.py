@@ -115,6 +115,17 @@ class Chunk:
             return 0
         return self.blocks[x+y*256+z*16]
 
+    def set_block_at(self, x, y, z, block):
+        if self.empty:
+            self.init_empty()
+        self.blocks[x+y*256+z*16] = block
+
+    def init_empty(self):
+        self.blocks = []
+        for i in range(4096):
+            self.blocks.append(0)
+        self.empty = False
+
     @property
     def origin(self):
         return self.position*16
