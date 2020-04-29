@@ -69,13 +69,21 @@ def get_options():
 
 def export_chunk(chunk, assets, data):
 
+    invalid = Image(Geometry(16, 16), "red")
+    unknow = Image(Geometry(16, 16), "fuchsia")
     hardcoded = {
-        #'minecraft:air': '',
-        #'minecraft:cave_air': '',
+        'minecraft:air': Color('white'),
+        'minecraft:cave_air': Color('black'),
         'minecraft:water': 'misc/underwater',
         'minecraft:lava': 'block/lava_still',
         'minecraft:grass_block': 'block/grass_path_top',
     }
+    for x in hardcoded:
+        if isinstance(hardcoded[x], Color):
+            hardcoded[x] = Image(Geometry(16, 16), hardcoded[x])
+        else:
+            hardcoded[x] = Image("%s/textures/%s.png"%(assets.directory, hardcoded[x]))
+            hardcoded[x].crop(Geometry(16,16))
 
     for y in range(16):
         img = Image(Geometry(16*16, 16*16), 'transparent')
@@ -83,28 +91,29 @@ def export_chunk(chunk, assets, data):
             for x in range(16):
                 i = None
                 sid = chunk.get_block_at(x, y, z)
-                bloc = data.blocks_states[sid]
-                if bloc in hardcoded:
-                    i = Image("%s/textures/%s.png"%(assets.directory, hardcoded[bloc]))
+                if sid == -1:
+                    i = invalid
                 else:
-                    prop = data.blocks_properties[sid]
-                    variant = assets.get_block_variant(bloc, prop)
-                    
-                    if 'model' in variant:
-                        faces = assets.get_faces_textures(assets.get_model(variant['model']))
-                        if 'up' in faces:
-                            #print("%s => %s"%(bloc, faces['up']))
-                            i = Image("%s/textures/%s.png"%(assets.directory, faces['up']))
+                    bloc = data.blocks_states[sid]
+                    if bloc in hardcoded:
+                        i = hardcoded[bloc]
+                    else:
+                        prop = data.blocks_properties[sid]
+                        variant = assets.get_block_variant(bloc, prop)
+                        
+                        if 'model' in variant:
+                            faces = assets.get_faces_textures(assets.get_model(variant['model']))
+                            if 'up' in faces:
+                                #print("%s => %s"%(bloc, faces['up']))
+                                i = Image("%s/textures/%s.png"%(assets.directory, faces['up']))
+                                i.crop(Geometry(16,16))
                 
-                if i:
-                    i.crop(Geometry(16,16))
-                    img.composite(i, x*16, z*16, CompositeOperator.OverCompositeOp)
+                if not i:
+                    i = unknow
+                img.composite(i, x*16, z*16, CompositeOperator.OverCompositeOp)
                 
         img.write("/tmp/chunk_%d_%d_%d_slice_%d.png"%(chunk.x, chunk.y, chunk.z, y))
-    
-        #x = assets.get_block_variant("minecraft:stone")
-        #x = assets.get_model(x['model'])
-        #x = assets.get_faces_textures(x)
+
 
 def main():
     options = get_options()

@@ -112,7 +112,7 @@ class Chunk:
 
         if self.palette:
             while max(self.blocks) >= len(self.palette):
-                self.palette.append(len(self.palette)) # FIXME (bpb==5)
+                self.palette.append(-1) # FIXME (bpb==5)
             self.blocks = [self.palette[x] for x in self.blocks]
 
     def write_fields(self, packet_buffer):

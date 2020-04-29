@@ -50,25 +50,27 @@ class ChunksManager:
             print("|", end="")
             for x in range(16):
                 sid = chunk.get_block_at(x, y_slice, z)
-                bloc = self.data.blocks_states[sid]
-                if bloc == "minecraft:air" or bloc == "minecraft:cave_air":
-                    c = " "
-                elif bloc == "minecraft:grass_block" or bloc == "minecraft:dirt":
-                    c = "-"
-                elif bloc == "minecraft:grass":
+                if sid == -1:
                     c = "!"
-                elif bloc == "minecraft:water":
-                    c = "~"
-                elif bloc == "minecraft:stone":
-                    c = "X"
                 else:
-                    missing.append(bloc)
-                    c = "?"
+                    bloc = self.data.blocks_states[sid]
+                    if bloc == "minecraft:air" or bloc == "minecraft:cave_air":
+                        c = " "
+                    elif bloc == "minecraft:grass_block" or bloc == "minecraft:dirt":
+                        c = "-"
+                    elif bloc == "minecraft:water":
+                        c = "~"
+                    elif bloc == "minecraft:stone":
+                        c = "X"
+                    else:
+                        missing.append(bloc)
+                        c = "?"
+
                 print(c, end="")
             print("|  %s"%(",".join(missing)))
         print("+%s+"%("-"*16))
         if chunk.entities:
-            print("Entities in chunk: %s"%(", ".join([x['id'].decode() for x in chunk.entities])))
+            print("Entities in slice: %s"%(", ".join([x['id'].decode() for x in chunk.entities])))
 
 
 class ChunkNotLoadedException(Exception):
