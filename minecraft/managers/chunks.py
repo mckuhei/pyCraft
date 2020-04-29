@@ -51,7 +51,6 @@ class ChunksManager:
             for x in range(16):
                 sid = chunk.get_block_at(x, y_slice, z)
                 bloc = self.data.blocks_states[sid]
-
                 if bloc == "minecraft:air" or bloc == "minecraft:cave_air":
                     c = " "
                 elif bloc == "minecraft:grass_block" or bloc == "minecraft:dirt":
@@ -68,6 +67,9 @@ class ChunksManager:
                 print(c, end="")
             print("|  %s"%(",".join(missing)))
         print("+%s+"%("-"*16))
+        if chunk.entities:
+            print("Entities in chunk: %s"%(", ".join([x['id'].decode() for x in chunk.entities])))
+
 
 class ChunkNotLoadedException(Exception):
     def __str__(self):

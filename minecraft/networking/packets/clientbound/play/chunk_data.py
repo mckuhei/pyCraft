@@ -1,3 +1,5 @@
+from math import floor
+
 from minecraft.networking.packets import Packet, PacketBuffer
 from minecraft.networking.types import (
     VarInt, Integer, Boolean, Nbt, UnsignedByte, Long, Short,
@@ -56,6 +58,11 @@ class ChunkDataPacket(Packet):
             self.chunks[i] = Chunk(self.x, i, self.z)
             if self.bit_mask_y & (1 << i):
                 self.chunks[i].read(packet_data)
+        
+        for e in self.entities:
+            y = e['y']
+            self.chunks[floor(y/16)].entities.append(e)
+
 
 class Chunk:
 
@@ -66,6 +73,7 @@ class Chunk:
         self.y = y
         self.z = z
         self.empty = empty
+        self.entities = []
 
     def __repr__(self):
         return 'Chunk(%r, %r, %r)' % (self.x, self.y, self.z)

@@ -8,6 +8,7 @@ import re
 import json
 import traceback
 from optparse import OptionParser
+from pgmagick import Image, Geometry, Color, CompositeOperator, DrawableRoundRectangle
 
 from minecraft import authentication
 from minecraft.exceptions import YggdrasilError
@@ -66,6 +67,44 @@ def get_options():
 
     return options
 
+def export_chunk(chunk, assets, data):
+
+    hardcoded = {
+        #'minecraft:air': '',
+        #'minecraft:cave_air': '',
+        'minecraft:water': 'misc/underwater',
+        'minecraft:lava': 'block/lava_still',
+        'minecraft:grass_block': 'block/grass_path_top',
+    }
+
+    for y in range(16):
+        img = Image(Geometry(16*16, 16*16), 'transparent')
+        for z in range(16):
+            for x in range(16):
+                i = None
+                sid = chunk.get_block_at(x, y, z)
+                bloc = data.blocks_states[sid]
+                if bloc in hardcoded:
+                    i = Image("%s/textures/%s.png"%(assets.directory, hardcoded[bloc]))
+                else:
+                    prop = data.blocks_properties[sid]
+                    variant = assets.get_block_variant(bloc, prop)
+                    
+                    if 'model' in variant:
+                        faces = assets.get_faces_textures(assets.get_model(variant['model']))
+                        if 'up' in faces:
+                            #print("%s => %s"%(bloc, faces['up']))
+                            i = Image("%s/textures/%s.png"%(assets.directory, faces['up']))
+                
+                if i:
+                    i.crop(Geometry(16,16))
+                    img.composite(i, x*16, z*16, CompositeOperator.OverCompositeOp)
+                
+        img.write("/tmp/chunk_%d_%d_%d_slice_%d.png"%(chunk.x, chunk.y, chunk.z, y))
+    
+        #x = assets.get_block_variant("minecraft:stone")
+        #x = assets.get_model(x['model'])
+        #x = assets.get_faces_textures(x)
 
 def main():
     options = get_options()
@@ -134,6 +173,9 @@ def main():
                 elif text.startswith("!print "):
                     p = text.split(" ")
                     chunks.print_chunk(chunks.get_chunk(int(p[1]), int(p[2]), int(p[3])), int(p[4]))
+                elif text.startswith("!export "):
+                    p = text.split(" ")
+                    export_chunk(chunks.get_chunk(int(p[1]), int(p[2]), int(p[3])), assets, mcdata)
                 else:
                     print("Unknow test command: %s"%(text))
             else:
