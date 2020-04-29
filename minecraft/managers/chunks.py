@@ -34,6 +34,22 @@ class ChunksManager:
             raise ChunkNotLoadedException(index)
         return self.chunks[index]
 
+    def get_loaded_area(self, ignore_empty=False):
+        first = next(iter(self.chunks.keys()))
+        x0 = x1 = first[0]
+        y0 = y1 = first[1]
+        z0 = z1 = first[2]
+        for k in self.chunks.keys():
+            if ignore_empty and self.chunks[k].empty:
+                continue
+            x0 = min(x0, k[0])
+            x1 = max(x1, k[0])
+            y0 = min(y0, k[1])
+            y1 = max(y1, k[1])
+            z0 = min(z0, k[2])
+            z1 = max(z1, k[2])
+        return ((x0,y0,z0),(x1,y1,z1))
+
     def get_block_at(self, x, y, z):
         c = self.get_chunk(floor(x/16), floor(y/16), floor(z/16))
         return c.get_block_at(x%16, y%16, z%16)

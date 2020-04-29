@@ -67,7 +67,14 @@ def get_options():
 
     return options
 
-def export_chunk(chunk, assets, data):
+def export_area(x1, y1, z1, x2, y2, z2, chunks, assets, data):
+
+    if x1>x2:
+        x1, x2 = x2, x1
+    if y1>y2:
+        y1, y2 = y2, y1
+    if x1>x2:
+        z1, z2 = z2, z1
 
     cache = {}
 
@@ -85,41 +92,44 @@ def export_chunk(chunk, assets, data):
             hardcoded[x] = Image("%s/textures/%s.png"%(assets.directory, hardcoded[x]))
             hardcoded[x].crop(Geometry(16,16))
 
-    for y in range(16):
-        img = Image(Geometry(16*16, 16*16), 'transparent')
-        for z in range(16):
-            for x in range(16):
-                i = None
-                sid = chunk.get_block_at(x, y, z)
-                if sid in cache:
-                    i = cache[sid]
-                else:
-                    bloc = data.blocks_states[sid]
-                    if bloc in hardcoded:
-                        i = hardcoded[bloc]
+    for y in range(y2-y1):
+        img = Image(Geometry(16*(x2-x1), 16*(z2-z1)), 'transparent')
+        for z in range(z2-z1):
+            for x in range(x2-x1):
+                try:
+                    i = None
+                    sid = chunks.get_block_at(x+x1, y+y1, z+z1)
+                    if sid in cache:
+                        i = cache[sid]
                     else:
-                        prop = data.blocks_properties[sid]
-                        variant = assets.get_block_variant(bloc, prop)
-                        
-                        if 'model' in variant:
-                            faces = assets.get_faces_textures(assets.get_model(variant['model']))
-                            if 'up' in faces:
-                                up = faces['up']
-                                i = Image("%s/textures/%s.png"%(assets.directory, up['texture']))
-                                if "uv" in up:
-                                    pass # TODO
-                                i.crop(Geometry(16,16))
-                                if "tintindex" in up:
-                                    tint = '#80ff00'
-                                    ti = Image(Geometry(16, 16), tint)
-                                    i.composite(ti, 0, 0, CompositeOperator.MultiplyCompositeOp)
-                    if not i:
-                        i = unknow
-                    cache[sid] = i
+                        bloc = data.blocks_states[sid]
+                        if bloc in hardcoded:
+                            i = hardcoded[bloc]
+                        else:
+                            prop = data.blocks_properties[sid]
+                            variant = assets.get_block_variant(bloc, prop)
+                            
+                            if 'model' in variant:
+                                faces = assets.get_faces_textures(assets.get_model(variant['model']))
+                                if 'up' in faces:
+                                    up = faces['up']
+                                    i = Image("%s/textures/%s.png"%(assets.directory, up['texture']))
+                                    if "uv" in up:
+                                        pass # TODO
+                                    i.crop(Geometry(16,16))
+                                    if "tintindex" in up:
+                                        tint = '#80ff00'
+                                        ti = Image(Geometry(16, 16), tint)
+                                        i.composite(ti, 0, 0, CompositeOperator.MultiplyCompositeOp)
+                        if not i:
+                            i = unknow
+                        cache[sid] = i
 
-                img.composite(i, x*16, z*16, CompositeOperator.OverCompositeOp)
+                    img.composite(i, x*16, z*16, CompositeOperator.OverCompositeOp)
+                except Exception:
+                    continue
                 
-        img.write("/tmp/chunk_%d_%d_%d_slice_%d.png"%(chunk.x, chunk.y, chunk.z, y))
+        img.write("/tmp/slice_%d.png"%(y))
 
 
 def main():
@@ -189,9 +199,23 @@ def main():
                 elif text.startswith("!print "):
                     p = text.split(" ")
                     chunks.print_chunk(chunks.get_chunk(int(p[1]), int(p[2]), int(p[3])), int(p[4]))
-                elif text.startswith("!export "):
-                    p = text.split(" ")
-                    export_chunk(chunks.get_chunk(int(p[1]), int(p[2]), int(p[3])), assets, mcdata)
+                elif text == "!chunks":
+                    area = chunks.get_loaded_area()
+                    y_count = area[1][1] - area[0][1]
+                    print("Bounds: %s"%(area,))
+                    for y in range(area[0][1], area[1][1]):
+                        print("Slice %d:"%(y))
+                        for z in range(area[0][2], area[1][2]):
+                            for x in range(area[0][0], area[1][0]):
+                                if (x,y,z) in chunks.chunks:
+                                    c = 'X'
+                                else:
+                                    c = '.'
+                                print(c, end="")
+                            print()
+                elif text == "!export":
+                    area = chunks.get_loaded_area(True)
+                    export_area(area[0][0]*16, area[0][1]*16, area[0][2]*16, area[1][0]*16, area[1][1]*16, area[1][2]*16, chunks, assets, mcdata)
                 else:
                     print("Unknow test command: %s"%(text))
             else:
