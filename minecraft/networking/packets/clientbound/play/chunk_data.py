@@ -3,7 +3,7 @@ from math import floor
 from minecraft.networking.packets import Packet, PacketBuffer
 from minecraft.networking.types import (
     VarInt, Integer, Boolean, Nbt, UnsignedByte, Long, Short,
-    multi_attribute_alias, Vector
+    multi_attribute_alias, Vector, UnsignedLong
 )
 
 class ChunkDataPacket(Packet):
@@ -96,7 +96,7 @@ class Chunk:
         size = VarInt.read(file_object)
         longs = []
         for i in range(size):
-            longs.append(Long.read(file_object))
+            longs.append(UnsignedLong.read(file_object))
 
         self.blocks = []
         mask = (1 << self.bpb)-1
@@ -108,12 +108,9 @@ class Chunk:
             if l2>l1:
                 n |= longs[l2] << (64-offset)
             n &= mask
+            if self.palette:
+                n = self.palette[n]
             self.blocks.append(n)
-
-        if self.palette:
-            while max(self.blocks) >= len(self.palette):
-                self.palette.append(-1) # FIXME (bpb==5)
-            self.blocks = [self.palette[x] for x in self.blocks]
 
     def write_fields(self, packet_buffer):
         pass # TODO

@@ -69,14 +69,14 @@ def get_options():
 
 def export_chunk(chunk, assets, data):
 
-    invalid = Image(Geometry(16, 16), "red")
+    cache = {}
+
     unknow = Image(Geometry(16, 16), "fuchsia")
     hardcoded = {
         'minecraft:air': Color('white'),
         'minecraft:cave_air': Color('black'),
-        'minecraft:water': 'misc/underwater',
+        'minecraft:water': Color('blue'), # TODO use 'block/water_still' with #0080ff tint
         'minecraft:lava': 'block/lava_still',
-        'minecraft:grass_block': 'block/grass_path_top',
     }
     for x in hardcoded:
         if isinstance(hardcoded[x], Color):
@@ -91,8 +91,8 @@ def export_chunk(chunk, assets, data):
             for x in range(16):
                 i = None
                 sid = chunk.get_block_at(x, y, z)
-                if sid == -1:
-                    i = invalid
+                if sid in cache:
+                    i = cache[sid]
                 else:
                     bloc = data.blocks_states[sid]
                     if bloc in hardcoded:
@@ -104,12 +104,19 @@ def export_chunk(chunk, assets, data):
                         if 'model' in variant:
                             faces = assets.get_faces_textures(assets.get_model(variant['model']))
                             if 'up' in faces:
-                                #print("%s => %s"%(bloc, faces['up']))
-                                i = Image("%s/textures/%s.png"%(assets.directory, faces['up']))
+                                up = faces['up']
+                                i = Image("%s/textures/%s.png"%(assets.directory, up['texture']))
+                                if "uv" in up:
+                                    pass # TODO
                                 i.crop(Geometry(16,16))
-                
-                if not i:
-                    i = unknow
+                                if "tintindex" in up:
+                                    tint = '#80ff00'
+                                    ti = Image(Geometry(16, 16), tint)
+                                    i.composite(ti, 0, 0, CompositeOperator.MultiplyCompositeOp)
+                    if not i:
+                        i = unknow
+                    cache[sid] = i
+
                 img.composite(i, x*16, z*16, CompositeOperator.OverCompositeOp)
                 
         img.write("/tmp/chunk_%d_%d_%d_slice_%d.png"%(chunk.x, chunk.y, chunk.z, y))

@@ -50,21 +50,22 @@ class ChunksManager:
             print("|", end="")
             for x in range(16):
                 sid = chunk.get_block_at(x, y_slice, z)
-                if sid == -1:
+                bloc = self.data.blocks_states[sid]
+                if bloc == "minecraft:air" or bloc == "minecraft:cave_air":
+                    c = " "
+                elif bloc == "minecraft:grass_block" or bloc == "minecraft:dirt":
+                    c = "-"
+                elif bloc == "minecraft:water":
+                    c = "~"
+                elif bloc == "minecraft:lava":
                     c = "!"
+                elif bloc == "minecraft:bedrock":
+                    c = "_"
+                elif bloc == "minecraft:stone":
+                    c = "X"
                 else:
-                    bloc = self.data.blocks_states[sid]
-                    if bloc == "minecraft:air" or bloc == "minecraft:cave_air":
-                        c = " "
-                    elif bloc == "minecraft:grass_block" or bloc == "minecraft:dirt":
-                        c = "-"
-                    elif bloc == "minecraft:water":
-                        c = "~"
-                    elif bloc == "minecraft:stone":
-                        c = "X"
-                    else:
-                        missing.append(bloc)
-                        c = "?"
+                    missing.append(bloc)
+                    c = "?"
 
                 print(c, end="")
             print("|  %s"%(",".join(missing)))

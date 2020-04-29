@@ -77,9 +77,9 @@ class AssetsManager:
             for x in e['faces']:
                 if x in faces:
                     continue
-                faces[x] = e['faces'][x]['texture']
-                while faces[x].startswith("#"):
+                faces[x] = e['faces'][x]
+                while faces[x]['texture'].startswith("#"):
                     # TODO: Raise exception on max iteration
-                    faces[x] = textures[faces[x][1:]]
+                    faces[x]['texture'] = textures[faces[x]['texture'][1:]]
         return faces
         
