@@ -65,7 +65,7 @@ class ForgeConnection(Connection):
                     phase=5
                 self.write_packet(serverbound.play.PluginMessagePacket(channel="FML|HS",data=bytes([255,phase])))
             if packet.data[0]==254: #Reset handshark
-                mods = forge_config.mods.copy()
+                mods = self.forge_config.mods.copy()
                 self.forge_config = ForgeConfig()
                 self.forge_config.mods = mods;
 
